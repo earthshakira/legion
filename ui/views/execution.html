@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% import "components/cards.html" light_card,end_card %}
+    <div class="row">
+        <div class="col-md-8">
+            {{script}}
+            {% if script %}
+                {{ light_card("New Scripts", "Create a new Script") }}
+            {% else %}
+                {{ light_card("Edit Script", "Edit your Script") }}
+            {% endif %}
+            <form id="newScriptForm">
+                <div class="row">
+                    <div class="col-sm-6 form-group">
+                        <label for="scriptName">Name</label>
+                        <input type="text" required class="form-control" id="scriptName" {% if script %} value="{{script.Name}}" disabled {%endif%} placeholder="Enter a script name"/>
+                    </div>
+                    <div class="col-sm-6 form-group">
+                        <label for="scriptLang">Select Language</label>
+                        <select class="form-control" id="scriptLang" value="{% if script %} {{script.Lang}} {%endif%}">
+                            <option>Python</option>
+                            <option>Shell</option>
+                        </select>
+                    </div>
+
+                </div>
+                
+                <div class="form-group">
+                    <div id="scriptEditor" style="width:100%;min-height: 400px;">{% if script %}{{script.Text}}{%endif%}
+                    </div>
+                </div>
+                <div class="text-right">
+                    <button class="btn btn-icon btn-primary" type="button" onclick="executeScript()">
+                        <div style="height:1.5em;width: 1.5em;display:none" class="loader" id="executionLoader"></div>
+                        <span class="btn-inner--icon" id="executionIcon"><i class="ni ni-user-run"></i></span>
+                    </button>
+                    <button class="btn btn-icon btn-warning" type="button" onclick="resetScript()">
+                        <span class="btn-inner--icon"><i class="ni ni-curved-next" style="transform: scale(-1, 1);"></i></span>
+                    </button>
+                    <button class="btn btn-icon btn-success" type="button" onclick="saveScript()">
+                        <span class="btn-inner--icon"><i class="ni ni-cloud-upload-96"></i></span>
+                        <span class="btn-inner--text">Save</span>
+                    </button>
+                </div>
+            </form>
+            <br>
+            
+            <div id="scriptOutput" style="display:none">
+                <div class="bg-gradient-secondary rounded">
+                    <div class="text-right" style="line-height:16px"><small><span class="badge badge-secondary">cmd</span></small></div>
+                    <code class="language-shell " id="cmdViewer" data-lang="html"></code>
+                </div>
+                <div class="bg-gradient-secondary rounded">
+                    <div class="text-right" style="line-height:16px"><small><span class="badge badge-success">stdout</span></small></div>
+                    <code class="language-shell " id="stdoutViewer" data-lang="html"></code>
+                </div>
+                <div class="bg-gradient-secondary rounded">
+                    <div class="text-right" style="line-height:16px"><small><span class="badge badge-danger">stderr</span></small></div>
+                    <code class="language-shell " id="stderrViewer" data-lang="html"></code>
+                </div>
+            </div>
+            {{ end_card() }}
+        </div>
+        <div class="col-md-4">
+            {{ light_card("Scripts", "Edit Scripts") }}
+            <div id="scriptsContainer"></div>
+            {{ end_card() }}
+        </div>
+    </div>
+{% endblock %}
+
+{% block custom_js %}
+<script src="/assets/js/ace.js"></script>
+<script src="/assets/js/theme-monokai.js"></script>
+<script src="/assets/js/mode-python.js"></script>
+<script>
+    let base=""
+    function byId(ele){return document.getElementById(ele);}
+
+    var editor = ace.edit("scriptEditor");
+
+    editor.setTheme("ace/theme/monokai");
+    var PythonMode = ace.require("ace/mode/python").Mode;
+    editor.session.setMode(new PythonMode());
+    editor.setFontSize("1em")
+    editor.commands.addCommand({
+        name: 'save',
+        bindKey: {win: "Ctrl-S", "mac": "Cmd-S"},
+        exec: saveScript
+    })
+
+    editor.commands.addCommand({
+        name: 'exec',
+        bindKey: {win: "Ctrl-Enter", "mac": "Cmd-Enter"},
+        exec: executeScript
+    })
+
+    function getScriptPayload(){
+        return {
+            "name": byId("scriptName").value,
+            "lang": byId("scriptLang").value,
+            "text": editor.getValue()
+        }
+    }
+    
+    function resetScript() {
+        editor.setValue(base);
+    }
+    
+    function renderLang(lang){
+        /* TODO: Add Support for other languages */
+        return `
+            <span class="badge" style="background-color: var(--success);color: white">${lang}</span>
+        `
+    }
+    function renderScriptRow(item){
+        console.log(item)
+        return `
+            <tr>
+                <td>
+                    <a href="/scripts/view/${item.name}">${item.name}</a><br/>
+                    <small>${item.modified_on.split(".")[0].replace("T"," ").replace("Z"," ")}</small>
+                </td>
+                <td>${renderLang(item.lang)}</td>
+            </tr>
+        `
+    }
+    function listScripts() {
+        fetch('/scripts/list')
+        .then(response => response.json())
+        .then(data => {
+            let scriptsTable = `
+            <div class="table-responsive">
+              <table class="table align-items-center table-flush">
+                <tbody class="list">
+                  ${Object.values(data).map(renderScriptRow).join("")}
+                </tbody>
+              </table>
+            </div>
+            `
+            byId("scriptsContainer").innerHTML = scriptsTable
+            base = editor.getValue()
+        });
+    }
+
+    listScripts()
+    function saveScript(){
+        let payload = getScriptPayload()    
+        base = payload.text
+        postData("/scripts/save",payload)
+        listScripts()
+    }
+
+    function executeScript(){
+        let payload = getScriptPayload()
+        byId("executionLoader").style.display="block";
+        byId("executionIcon").style.display="none";
+        
+        postData("/scripts/execute",payload).then( (resp) => {
+            for(let k in resp){
+                byId(k + "Viewer").innerHTML = "<pre>" + resp[k] + "</pre>"
+            }
+            byId("scriptOutput").style.display="block";
+            byId("executionIcon").style.display="block";
+            byId("executionLoader").style.display="none";
+        })
+    }
+</script>
+{% endblock %}

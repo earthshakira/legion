@@ -1,0 +1,35 @@
+<!--
+=========================================================
+* Argon Dashboard - v1.2.0
+=========================================================
+* Product Page: https://www.creative-tim.com/product/argon-dashboard
+
+* Copyright  Creative Tim (http://www.creative-tim.com)
+* Coded by www.creative-tim.com
+=========================================================
+* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+-->
+
+<!DOCTYPE html>
+<html>
+{% include "components/head.html" %}
+<body>
+  {% include "components/navbar.html" %}
+  <!-- Main content -->
+  <div class="main-content" id="panel">
+    <!-- Topnav -->
+    {% include "components/topnav.html" %}
+    
+    <!-- Header -->
+    {% include "components/header.html" %}
+    <!-- Page content -->
+    <div class="container-fluid mt--6">
+        {% block content %}
+        {% endblock %}
+    </div>
+  </div>
+  {% include "components/footer.html" %}
+  {% block custom_js %} {%endblock%}
+</body>
+
+</html>
