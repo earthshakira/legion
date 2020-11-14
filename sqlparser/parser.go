@@ -381,7 +381,6 @@ func (p *parser) doParse() (query.Query, error) {
 			p.step = stepCreateDataTypes
 		case stepCreateDataTypes:
 			dtype := p.peek()
-			fmt.Println("GOT DTYPE:", dtype)
 			switch dtype {
 			case "BOOL":
 				p.query.DTypes = append(p.query.DTypes, query.Bool)

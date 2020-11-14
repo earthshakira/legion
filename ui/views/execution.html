@@ -6,9 +6,9 @@
         <div class="col-md-8">
             {{script}}
             {% if script %}
-                {{ light_card("New Scripts", "Create a new Script") }}
-            {% else %}
                 {{ light_card("Edit Script", "Edit your Script") }}
+            {% else %}
+                {{ light_card("New Scripts", "Create a new Script") }}
             {% endif %}
             <form id="newScriptForm">
                 <div class="row">

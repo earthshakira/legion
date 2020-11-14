@@ -30,6 +30,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tdewolff/minify v2.3.6+incompatible // indirect
 	github.com/tdewolff/parse v2.3.4+incompatible // indirect
+	github.com/tinylib/msgp v1.1.4
 	github.com/vmihailenco/msgpack/v5 v5.0.0-rc.2 // indirect
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
 	golang.org/x/sys v0.0.0-20201110211018-35f3e6cf4a65 // indirect

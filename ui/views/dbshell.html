@@ -1,1 +1,160 @@
 {% extends "base.html" %}
+
+{% block content %}
+    {% import "components/cards.html" light_card,end_card %}
+    <div class="row">
+        <div class="col-md-8">
+            {{ light_card("shell", "Execute queries") }}
+            <form id="newScriptForm">
+                <div class="form-group">
+                    <div id="scriptEditor" style="width:100%;min-height: 100px;"></div>
+                </div>
+                <div class="text-right">
+                    <button class="btn btn-icon btn-primary" type="button" onclick="executeScript()">
+                        <div style="height:1.5em;width: 1.5em;display:none" class="loader" id="executionLoader"></div>
+                        <span class="btn-inner--icon" id="executionIcon"><i class="ni ni-user-run"></i></span>
+                    </button>
+                </div>
+            </form>
+            <br>
+            
+            <div id="scriptOutput">
+                <div class="bg-gradient-secondary rounded" style="display:none">
+                    <div class="text-right" style="line-height:16px"><small><span class="badge badge-secondary">query</span></small></div>
+                    <div class="language-shell " id="cmdViewer" data-lang="html"></div>
+                </div>
+                <div class="bg-gradient-secondary rounded" style="display:none">
+                    <div class="text-right" style="line-height:16px"><small><span class="badge badge-success">table</span></small></div>
+                    <code class="language-shell " id="stdoutViewer" data-lang="html"></code>
+                </div>
+                <div class="bg-gradient-secondary rounded" style="display:none">
+                    <div class="text-right" style="line-height:16px"><small><span class="badge badge-danger">error</span></small></div>
+                    <code class="language-shell " id="stderrViewer" data-lang="html"></code>
+                </div>
+            </div>
+            {{ end_card() }}
+        </div>
+        <div class="col-md-4">
+            {{ light_card("schemas", "All your tables") }}
+            <div id="scriptsContainer"></div>
+            {{ end_card() }}
+        </div>
+    </div>
+{% endblock %}
+
+{% block custom_js %}
+<script src="/assets/js/ace.js"></script>
+<script src="/assets/js/theme-monokai.js"></script>
+<script src="/assets/js/mode-mysql.js"></script>
+<script>
+    let base=""
+    function byId(ele){return document.getElementById(ele);}
+
+    var editor = ace.edit("scriptEditor");
+
+    editor.setTheme("ace/theme/monokai");
+var PythonMode = ace.require("ace/mode/mysql").Mode;
+    editor.session.setMode(new PythonMode());
+    editor.setFontSize("1em")
+
+    editor.commands.addCommand({
+        name: 'exec',
+        bindKey: {win: "Ctrl-Enter", "mac": "Cmd-Enter"},
+        exec: executeScript
+    })
+
+    function getScriptPayload(){
+        return {
+            "query": editor.getValue()
+        }
+    }
+    
+
+    function renderTable(data){
+        function renderRow(row){
+            let x = "";
+            for (let d of row){
+                x+=`<td>${d}</td>`
+            }
+            return x
+        }
+        let table = `
+            <div class="table-responsive">
+              <table class="table align-items-center table-flush">
+                <thead class="thead-light">
+                  <tr>${Object.values(data[0]).map(d => '<th scope="col" class="sort" data-sort="name">'+d+"</th>").join("")}</tr>
+                </thead>
+                <tbody class="list">
+                  <tr>${Object.values(data[1]).map(renderRow).join("</tr><tr>")}</tr>
+                </tbody>
+              </table>
+            </div>
+        `
+        return table
+    }
+
+
+    function renderScriptRow(item){
+        console.log(item)
+        return `
+            <tr>
+                <td>
+                    ${item.TableName}
+                </td>
+            </tr>
+        `
+    }
+    function listScripts() {
+        fetch('/shell/schemas')
+        .then(response => response.json())
+        .then(data => {
+            let scriptsTable = `
+            <div class="table-responsive">
+              <table class="table align-items-center table-flush">
+                <tbody class="list">
+                  ${Object.values(data).map(renderScriptRow).join("")}
+                </tbody>
+              </table>
+            </div>
+            `
+            byId("scriptsContainer").innerHTML = scriptsTable
+            base = editor.getValue()
+        });
+    }
+
+    listScripts()
+
+    function executeScript(){
+        let payload = getScriptPayload()
+        byId("executionLoader").style.display="block";
+        byId("executionIcon").style.display="none";
+        byId("cmdViewer").parentElement.style.display="none";
+        byId("stdoutViewer").parentElement.style.display="none";
+        byId("stderrViewer").parentElement.style.display="none";
+        postData("/shell/query",payload).then( (resp) => {
+
+            if (resp['error']){
+                console.log("Error")
+                byId("cmdViewer").parentElement.style.display="block";
+                byId("stderrViewer").parentElement.style.display="block";
+                byId("cmdViewer").innerHTML = `<pre>${resp["query"]}</pre>`
+                byId("stderrViewer").innerHTML = `<pre style="color:red">${resp["error"]}</pre>`
+            } else if (resp['status']) {
+                console.log("Succ")
+                byId("cmdViewer").parentElement.style.display="block";
+                byId("stdoutViewer").parentElement.style.display="block";
+                byId("cmdViewer").innerHTML = `<pre>${resp["query"]}</pre>`
+                byId("stdoutViewer").innerHTML = `<pre>${resp["status"]}</pre>`
+            } else {
+                console.log("Table",resp)
+                byId("stdoutViewer").parentElement.style.display="block";
+                byId("stdoutViewer").innerHTML = renderTable(resp)
+            }
+        }).catch(err => {
+        }).then(() => {
+            byId("executionLoader").style.display="none";
+            byId("executionIcon").style.display="block";
+        })
+    }
+</script>
+{% endblock %}

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"sync"
@@ -130,11 +129,6 @@ func (ee *ExecutionEngine) saveScript(ctx iris.Context) {
 func (ee *ExecutionEngine) executeScript(ctx iris.Context) {
 	var b ScriptPayload
 	err := ctx.ReadJSON(&b)
-	if err != nil {
-		ctx.StopWithProblem(iris.StatusBadRequest, iris.NewProblem().
-			Title("Unable to execute script").DetailErr(err))
-		return
-	}
 
 	if err != nil {
 		ctx.StopWithProblem(iris.StatusBadRequest, iris.NewProblem().
@@ -144,7 +138,9 @@ func (ee *ExecutionEngine) executeScript(ctx iris.Context) {
 
 	dir, err := ioutil.TempDir("/tmp", "script")
 	if err != nil {
-		log.Fatal(err)
+		ctx.StopWithProblem(iris.StatusBadRequest, iris.NewProblem().
+			Title("Unable to execute script").DetailErr(err))
+		return
 	}
 	defer os.RemoveAll(dir)
 	fmt.Println(dir)

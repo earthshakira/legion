@@ -332,7 +332,7 @@ var PythonHighlightRules = function() {
         }, {
             defaultToken: "string"
         }],
-        "fqstringParRules": [{//TODO: nested {}
+        "fqstringParRules": [{
             token: "paren.lparen",
             regex: "[\\[\\(]"
         }, {

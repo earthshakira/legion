@@ -16,4 +16,6 @@
 
 # ignore iris project file
 .iris.yml
+
+# ignoring the build file to help
 legion
