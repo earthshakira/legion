@@ -1,79 +1,89 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/sophron-dev-works/legion/clustering"
 	"github.com/sophron-dev-works/legion/dbshell"
 	"github.com/sophron-dev-works/legion/execution"
+	"github.com/sophron-dev-works/legion/storage"
 	"github.com/sophron-dev-works/legion/ui"
 )
 
-func startUI() {
-	iw := ui.Init()
-	var ee execution.ExecutionEngine
-	var se dbshell.ShellEngine
+var raftPort, serfPort, httpPort, grpcPort int
+var ip, joinNodeID, raftDir string
 
-	iw.AddApp("/scripts", &ee)
-	iw.AddApp("/shell", &se)
-	iw.Start()
+func init() {
+	flag.IntVar(&httpPort, "http", 8003, "HTTP Port")
+	flag.IntVar(&serfPort, "serf", 8001, "Serf Port")
+	flag.IntVar(&raftPort, "raft", 8002, "Raft Port")
+	flag.IntVar(&grpcPort, "grpc", 8004, "grpc Port")
+	flag.StringVar(&ip, "ip", "localhost", "LocalIp")
+	flag.StringVar(&joinNodeID, "join", "", "id of a node to join")
+	flag.StringVar(&raftDir, "raftDir", "./raftStorage", "Directory to store Raft Logs")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options] \n", os.Args[0])
+		flag.PrintDefaults()
+	}
 }
+
+func startUI() ui.IrisWrapper {
+
+	nc := clustering.NodeConfig{
+		Ip:       ip,
+		HttpPort: httpPort,
+		SerfPort: serfPort,
+		RaftPort: raftPort,
+		GrpcPort: grpcPort,
+		RaftDir:  raftDir,
+		Join:     joinNodeID,
+	}
+
+	nc.Init()
+
+	var node clustering.Node
+	node.Init(&nc)
+	go node.Start()
+
+	var db storage.SimpleStore
+	db.Init(&node)
+
+	iw := ui.Init()
+	var dash clustering.Dashboard
+	dash.Init(&node)
+
+	var ee execution.ExecutionEngine
+	ee.Init(&node)
+
+	var ex execution.Executor
+	ex.Init(&node, &nc, &db)
+	go ex.Serve()
+	go ex.Listen()
+	fmt.Println("done")
+
+	var we execution.WorkflowEngine
+	we.Init(&node, ex)
+
+	var se dbshell.ShellEngine
+	se.SetNode(db, &node)
+
+	var ds dbshell.DistributedShell
+	go ds.Listen()
+	ds.Init(db, &node)
+
+	iw.AddApp("/dashboard", &dash)
+	iw.AddApp("/scripts", &ee)
+	iw.AddApp("/workflows", &we)
+	iw.AddApp("/shell", &se)
+	iw.AddApp("/dshell", &ds)
+	iw.Start(httpPort)
+	return iw
+}
+
 func main() {
-	startUI()
-
-	// t := make([]byte, 0, 10000)
-	// start := time.Now()
-	// t = msgp.AppendArrayHeader(t, 100000*3)
-	// for i := 0; i < 100000; i++ {
-	// 	t = msgp.AppendArrayHeader(t, 1)
-	// 	t = msgp.AppendInt(t, 10)
-	// 	t = msgp.AppendArrayHeader(t, 1)
-	// 	t = msgp.AppendString(t, "Hello")
-	// 	t = msgp.AppendArrayHeader(t, 1)
-	// 	t = msgp.AppendFloat64(t, 1.15)
-	// }
-	// var sout, sout2 bytes.Buffer
-	// fmt.Println(msgp.ArrayHeaderSize)
-	// fmt.Println(sout.Len(), time.Since(start))
-	// msgp.UnmarshalAsJSON(&sout, t)
-
-	// tt := make([]byte, 0, 10000)
-	// start = time.Now()
-	// for i := 0; i < 100000; i++ {
-	// 	tt = msgp.AppendArrayHeader(tt, 1)
-	// 	tt = msgp.AppendInt(tt, 10)
-	// 	tt = msgp.AppendArrayHeader(tt, 1)
-	// 	tt = msgp.AppendString(tt, "Hello")
-	// 	tt = msgp.AppendArrayHeader(tt, 1)
-	// 	tt = msgp.AppendFloat64(tt, 1.15)
-	// }
-	// tt = append(msgp.AppendArrayHeader([]byte{}, 100000*3), tt...)
-	// fmt.Println(sout2.Len(), time.Since(start))
-	// msgp.UnmarshalAsJSON(&sout2, tt)
-	// fmt.Println(sout2.Len(), time.Since(start))
-
-	// var x storage.SimpleStore
-	// defer x.Shutdown()
-	// x.Init("basic")
-	// tableName := "datatypes_test"
-
-	// s := time.Now()
-	// _, err := x.Query("CREATE TABLE " + tableName + "(foo INTEGER,bar DOUBLE,bl BOOL,there STRING)")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// fmt.Println(time.Since(s))
-	// _, err = x.Query("INSERT INTO " + tableName + "(foo,bar,bl,there) VALUES ('4','4.5','true','hello'),('5','5.5','false','world')")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// fmt.Println(time.Since(s))
-	// xr, err := x.Query("SELECT foo,bar,bl,there from " + tableName)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// s = time.Now()
-	// var b bytes.Buffer
-	// msgp.Encode(&b, xr)
-	// fmt.Println(time.Since(s))
-	// x.Query("SELECT bar from " + tableName)
-	// x.Query("SELECT foo from " + tableName)
+	flag.Parse()
+	iw := startUI()
+	defer iw.Clean()
 }

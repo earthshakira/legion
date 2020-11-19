@@ -1,8 +1,12 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/core/router"
+	"github.com/kataras/iris/v12/mvc"
+	"google.golang.org/grpc"
 )
 
 // Breadcrumb TODO: Breadcrumb documentation
@@ -37,8 +41,10 @@ var navItems []NavItem
 
 // IrisWrapper hels us to create the default struct that holds the top level of the routes and does stuff like template initialization and other things
 type IrisWrapper struct {
-	app *iris.Application
-	vs  ViewState
+	app     *iris.Application
+	engines []IrisApp
+	vs      ViewState
+	Grpc    *grpc.Server
 }
 
 // Init initializes the IrisWrapper with configs and instantiates the app
@@ -49,7 +55,13 @@ func Init() IrisWrapper {
 			"Link",
 			"Dashboard",
 			"",
-			"ni ni-tv-2 text-primary",
+			"ni ni-app text-primary",
+		},
+		{
+			"Heading",
+			"Execution",
+			"",
+			"",
 		},
 		{
 			"Link",
@@ -59,19 +71,32 @@ func Init() IrisWrapper {
 		},
 		{
 			"Link",
+			"Workflow",
+			"/workflows",
+			"ni ni-vector text-purple",
+		},
+		{
+			"Heading",
+			"Database",
+			"",
+			"",
+		},
+		{
+			"Link",
 			"DB Shell",
 			"/shell",
 			"ni ni-laptop text-blue",
 		},
 		{
-			"Heading",
-			"Documentation",
-			"",
-			"",
+			"Link",
+			"Distributed Shell",
+			"/dshell",
+			"ni ni-cloud-download-95 text-green",
 		},
 	}
 	var iw IrisWrapper
 	iw.app = iris.New()
+	iw.Grpc = grpc.NewServer()
 	iw.vs = ViewState{
 		ActivePage: "Scripts",
 		NavItems:   navItems,
@@ -85,19 +110,36 @@ func Init() IrisWrapper {
 }
 
 // Start : member function to initialize the wrapper
-func (iw *IrisWrapper) Start() {
+func (iw *IrisWrapper) Start(httpPort int) {
 	iw.app.HandleDir("/assets", iris.Dir("ui/assets"))
 	iw.app.RegisterView(iris.Django("ui/views", ".html").Reload(true))
-	iw.app.Listen(":8080")
+	iw.app.Listen(fmt.Sprintf("0.0.0.0:%d", httpPort))
 }
 
 // IrisApp is the interface that allows an app to create more routes
 type IrisApp interface {
 	Create(iw router.Party, vs ViewState)
+	Clean()
 }
 
 // AddApp uses the IrisApp interface and executes the `Create` method to add the routes defined by the related app
 func (iw *IrisWrapper) AddApp(route string, ia IrisApp) {
+	iw.engines = append(iw.engines, ia)
 	party := iw.app.Party(route)
 	ia.Create(party, iw.vs)
+}
+
+func (iw *IrisWrapper) RegistergRPC(service interface{}) {
+	rootApp := mvc.New(iw.app)
+	rootApp.Handle(&service, mvc.GRPC{
+		Server:      iw.Grpc,          // Required.
+		ServiceName: "proto.Executor", // Required.
+		Strict:      false,
+	})
+}
+
+func (iw *IrisWrapper) Clean() {
+	for _, engine := range iw.engines {
+		engine.Clean()
+	}
 }

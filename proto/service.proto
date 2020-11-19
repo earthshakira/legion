@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package proto;
+
+message Task {
+    string id = 1;
+    string workflowId = 7;
+    string workflowName = 2;
+    int32 graphIndex = 3;
+    string inputFile = 4;
+    int64 totalSteps = 5;
+    int64 completedSteps = 6;
+    string ownerRpcAddress = 8;
+}
+
+message TaskAck {
+    string uuid  = 1;
+    string status  = 2;
+    string outputPath = 3;
+}
+
+message FileContents {
+    string content = 1;
+}
+
+message FilePath {
+    string path = 1;
+}
+
+message WorkflowLog {
+    string id = 1;
+    string taskId = 2;
+    string log = 3;
+}
+
+service Executor {
+    rpc Submit (Task) returns (TaskAck);
+    rpc WriteFile (FileContents) returns (FilePath);
+}

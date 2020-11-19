@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% import "components/cards.html" light_card,end_card %}
+    <div class="row">
+        <div class="col-md-8">
+            {{ light_card(member.Name, "Serf") }}
+                <p>Status: {{ member.Status.String() }} </p>
+                <p>Number of Nodes: {{ numNodes }} </p>
+                {{memberList}}
+                <table>
+                {% for node in members %} 
+                    <tr>
+                        <td>{{node.Name}}</td>
+                        <td>{{node.Addr}}</td>
+                        <td>{{node.Status.String()}}</td>
+                        {% for tag,value in node.Tags %}
+                            <td>{{tag}} =  {{ value }} | </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+                </table>
+
+                {% for k,v in stat %} 
+                    <div>
+                        {{k}} | {{v}}
+                    </div>
+                {% endfor %}
+            {{ end_card() }}
+        </div>
+    </div>
+    {{ light_card("","Flowy") }}
+        <div class="create-flowy">The block to be dragged</div>
+        <div id="canvas" style="width:100%;min-height:500px"></div>
+    {{ end_card() }}
+{% endblock %}
+
+{% block custom_js %}
+    <script>
+        var spacing_x = 40;
+        var spacing_y = 100;
+        // Initialize Flowy
+        flowy(document.getElementById("canvas"), onGrab, onRelease, onSnap, onRearrange, spacing_x, spacing_y);
+        function onGrab(block){
+            // When the user grabs a block
+        }
+        function onRelease(){
+            // When the user releases a block
+        }
+        function onSnap(block, first, parent){
+            // When a block snaps with another one
+        }
+        function onRearrange(block, parent){
+            // When a block is rearranged
+        }
+    </script>
+{% endblock %}

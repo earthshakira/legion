@@ -1,6 +1,7 @@
 package sqlparser
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -86,7 +87,9 @@ func (p *parser) parse() (query.Query, error) {
 	if p.err == nil {
 		p.err = p.validate()
 	}
-	p.logError()
+	if p.err != nil {
+		p.err = errors.New(p.logError())
+	}
 	return q, p.err
 }
 
@@ -511,13 +514,14 @@ func (p *parser) validate() error {
 	return nil
 }
 
-func (p *parser) logError() {
+func (p *parser) logError() string {
 	if p.err == nil {
-		return
+		return ""
 	}
-	fmt.Println(p.sql)
-	fmt.Println(strings.Repeat(" ", p.i) + "^")
-	fmt.Println(p.err)
+	errorString := fmt.Sprintln(p.sql)
+	errorString += fmt.Sprintln(strings.Repeat(" ", p.i) + "^")
+	errorString += fmt.Sprintln(p.err)
+	return errorString
 }
 
 func isIdentifier(s string) bool {

@@ -1,6 +1,6 @@
 {% macro dark_card(label="",title="") export%}
     <div class="card bg-default">
-        {% if label %}
+        {% if label > "" %}
         <div class="card-header bg-transparent">
             <div>
                 <h6 class="text-light text-uppercase ls-1 mb-1">{{label}}</h6>
@@ -11,8 +11,9 @@
         <div class="card-body text-white">
 {% endmacro %}
 
-{% macro light_card(label="",title="") export%}
+{% macro light_card(label="",title="",styles="") export%}
 <div class="card">
+    {% if label %}
     <div class="card-header bg-transparent">
         <div class="row align-items-center">
         <div class="col">
@@ -21,7 +22,8 @@
         </div>
         </div>
     </div>
-    <div class="card-body">
+    {% endif %}
+    <div class="card-body" style="{{styles}}">
 {% endmacro %}
 
 {% macro end_card() export%}

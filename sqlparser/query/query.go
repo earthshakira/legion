@@ -1,5 +1,10 @@
 package query
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
 // Query represents a parsed query
 type Query struct {
 	Type       Type
@@ -48,6 +53,45 @@ const (
 	// Geo2d for the database
 	Geo2d
 )
+
+var dtypeToString = map[DType]string{
+	UnknownDtype: "UnknownDtype",
+	Bool:         "Bool",
+	Int:          "Integer",
+	Double:       "Double",
+	String:       "String",
+	DateTime:     "DateTime",
+	Geo2d:        "Geo2d",
+}
+
+var stringToDtype = map[string]DType{
+	"UnknownDtype": UnknownDtype,
+	"Bool":         Bool,
+	"Integer":      Int,
+	"Double":       Double,
+	"String":       String,
+	"DateTime":     DateTime,
+	"Geo2d":        Geo2d,
+}
+
+func (s DType) MarshalJSON() ([]byte, error) {
+	buffer := bytes.NewBufferString(`"`)
+	buffer.WriteString(dtypeToString[s])
+	buffer.WriteString(`"`)
+	return buffer.Bytes(), nil
+}
+
+// UnmarshalJSON unmashals a quoted json string to the enum value
+func (s *DType) UnmarshalJSON(b []byte) error {
+	var j string
+	err := json.Unmarshal(b, &j)
+	if err != nil {
+		return err
+	}
+	// Note that if the string cannot be found then it will be set to the zero value, 'Created' in this case.
+	*s = stringToDtype[j]
+	return nil
+}
 
 // TypeString is a string slice with the names of all types in order
 var TypeString = []string{

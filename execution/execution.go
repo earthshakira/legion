@@ -2,6 +2,7 @@ package execution
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/core/router"
+	"github.com/sophron-dev-works/legion/clustering"
 	"github.com/sophron-dev-works/legion/ui"
 )
 
-func trialRun(file string, wg *sync.WaitGroup) (string, string, string) {
+func RunScript(file string, wg *sync.WaitGroup) (string, string, string) {
 	wg.Add(1)
 	goExecutable, _ := exec.LookPath("python3")
 	var sout, serr bytes.Buffer
@@ -35,8 +36,12 @@ func trialRun(file string, wg *sync.WaitGroup) (string, string, string) {
 }
 
 type ExecutionEngine struct {
-	db *badger.DB
-	vs ui.ViewState
+	vs   ui.ViewState
+	node *clustering.Node
+}
+
+func (ee *ExecutionEngine) Init(node *clustering.Node) {
+	ee.node = node
 }
 
 func (ee *ExecutionEngine) defaultConfig() map[string]interface{} {
@@ -47,8 +52,6 @@ func (ee *ExecutionEngine) defaultConfig() map[string]interface{} {
 
 func (ee *ExecutionEngine) Create(iw router.Party, vs ui.ViewState) {
 	ee.vs = vs
-
-	ee.db, _ = badger.Open(badger.DefaultOptions("/tmp/scriptStore"))
 	iw.Get("/", func(ctx iris.Context) {
 		ctx.View("execution.html", ee.defaultConfig())
 	})
@@ -57,7 +60,6 @@ func (ee *ExecutionEngine) Create(iw router.Party, vs ui.ViewState) {
 		// TODO: handle errors
 		scriptPayload, _ := ee.getScript(ctx.Params().Get("name"))
 		data := ee.defaultConfig()
-		fmt.Println(scriptPayload)
 		data["script"] = scriptPayload
 		ctx.View("execution.html", data)
 	})
@@ -66,46 +68,27 @@ func (ee *ExecutionEngine) Create(iw router.Party, vs ui.ViewState) {
 	iw.Post("/save", ee.saveScript)
 }
 
+func (ee *ExecutionEngine) Clean() {
+
+}
 func (ee *ExecutionEngine) getScript(name string) (ScriptPayload, error) {
 	var sp ScriptPayload
-	err := ee.db.View(func(txn *badger.Txn) error {
-		// TODO: handle Errors
-		item, _ := txn.Get([]byte("script." + name))
-		_ = item.Value(func(val []byte) error {
-			sp.FromBytes(val)
-			return nil
-		})
-		return nil
-	})
-	if err != nil {
-		return sp, err
+	val, exists := ee.node.Raft().Get("script." + name)
+	if !exists {
+		return sp, errors.New("Script doesn't exist")
 	}
-	return sp, nil
+	err := sp.FromBytes(val)
+	return sp, err
 }
 
 func (ee *ExecutionEngine) listAllScripts(ctx iris.Context) {
 	var scripts []ScriptPayload
-	ee.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-		prefix := []byte("script.")
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				var sp ScriptPayload
-				sp.FromBytes(v)
-				sp.Text = ""
-				scripts = append(scripts, sp)
-				fmt.Println(string(k), sp)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	m, _ := ee.node.Raft().GetAll("script.")
+	for _, v := range m {
+		var sp ScriptPayload
+		sp.FromBytes(v)
+		scripts = append(scripts, sp)
+	}
 	ctx.JSON(scripts)
 }
 func (ee *ExecutionEngine) saveScript(ctx iris.Context) {
@@ -118,12 +101,12 @@ func (ee *ExecutionEngine) saveScript(ctx iris.Context) {
 	}
 
 	b.Modified = time.Now()
-	err = ee.db.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte("script."+b.Name), b.Bytes())
-		return err
-	})
+	err = ee.node.Raft().Set("script."+b.Name, b.Bytes())
+	if err != nil {
+		ctx.StopWithProblem(iris.StatusForbidden, iris.NewProblem().
+			Title("Unable to save script").DetailErr(err))
+	}
 	ctx.StatusCode(iris.StatusCreated)
-
 }
 
 func (ee *ExecutionEngine) executeScript(ctx iris.Context) {
@@ -145,12 +128,11 @@ func (ee *ExecutionEngine) executeScript(ctx iris.Context) {
 	defer os.RemoveAll(dir)
 	fmt.Println(dir)
 	fileName := dir + "/script.py"
-	fmt.Println(b.Text)
 	err = ioutil.WriteFile(fileName, []byte(b.Text), 0644)
 	out, err := exec.Command("python3", fileName).Output()
 	fmt.Println(out)
 	var wg sync.WaitGroup
-	cmd, op, er := trialRun(fileName, &wg)
+	cmd, op, er := RunScript(fileName, &wg)
 	ctx.StatusCode(iris.StatusCreated)
 	ctx.JSON(ScriptOutput{cmd, er, op})
 }

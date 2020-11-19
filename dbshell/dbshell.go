@@ -5,6 +5,7 @@ import (
 
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/core/router"
+	"github.com/sophron-dev-works/legion/clustering"
 	"github.com/sophron-dev-works/legion/storage"
 	"github.com/sophron-dev-works/legion/ui"
 	"github.com/tinylib/msgp/msgp"
@@ -23,11 +24,14 @@ func (se *ShellEngine) defaultConfig() map[string]interface{} {
 	}
 }
 
+func (se *ShellEngine) SetNode(db storage.SimpleStore, node *clustering.Node) {
+	se.db = db
+}
+
 // Create is the implementation of IrisApp for getting the party for the DB Shell
 func (se *ShellEngine) Create(iw router.Party, vs ui.ViewState) {
 	se.vs = vs
 	se.vs.ActivePage = "DB Shell"
-	se.db.Init("dbshell")
 	iw.Get("/", func(ctx iris.Context) {
 		ctx.View("dbshell.html", se.defaultConfig())
 	})
@@ -37,6 +41,9 @@ func (se *ShellEngine) Create(iw router.Party, vs ui.ViewState) {
 	iw.Post("/query", se.executeQuery)
 }
 
+func (se *ShellEngine) Clean() {
+	se.db.Shutdown()
+}
 func (se *ShellEngine) executeQuery(ctx iris.Context) {
 	b := make(map[string]string)
 	err := ctx.ReadJSON(&b)
@@ -49,7 +56,6 @@ func (se *ShellEngine) executeQuery(ctx iris.Context) {
 	if qr != nil {
 		var b bytes.Buffer
 		msgp.Encode(&b, qr)
-
 		msgp.UnmarshalAsJSON(ctx.ResponseWriter(), b.Bytes())
 		return
 	}

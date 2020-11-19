@@ -3,6 +3,8 @@ package execution
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 )
@@ -26,16 +28,51 @@ func (s *ScriptPayload) Bytes() []byte {
 	return network.Bytes()
 }
 
-func (s *ScriptPayload) FromBytes(data []byte) {
+func (s *ScriptPayload) FromBytes(data []byte) error {
 	dec := gob.NewDecoder(bytes.NewBuffer(data))
 	err := dec.Decode(&s)
-	if err != nil {
-		log.Fatal("decode error:", err)
-	}
+	return err
 }
 
 type ScriptOutput struct {
 	Cmd    string `json:"cmd"`
 	Stderr string `json:"stderr"`
 	Stdout string `json:"stdout"`
+}
+
+type WorkflowBlockType int
+
+const (
+	Unknown WorkflowBlockType = iota
+	Script
+	JSONSplitter
+	DatabaseInsert
+)
+
+type WorkflowBlock struct {
+	Id     int               `json:"id"`
+	Parent int               `json:"parent"`
+	Type   WorkflowBlockType `json:"type"`
+	Value  string            `json:"value"`
+}
+
+type WorkflowPayload struct {
+	// Output of the flowy plugin
+	Name     string                 `json:"name"`
+	Output   map[string]interface{} `json:"output"`
+	Graph    []WorkflowBlock        `json:"blocks"`
+	Modified time.Time              `json:"modified_on"`
+}
+
+func (w *WorkflowPayload) Bytes() []byte {
+	b, err := json.Marshal(w)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return b
+}
+
+func (w *WorkflowPayload) FromBytes(data []byte) error {
+	err := json.Unmarshal(data, w)
+	return err
 }

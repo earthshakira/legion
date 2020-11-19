@@ -1,7 +1,8 @@
 package storage
 
 import (
-	"errors"
+	"bytes"
+	"encoding/json"
 	"strconv"
 	"time"
 
@@ -9,6 +10,72 @@ import (
 	"github.com/tinylib/msgp/msgp"
 )
 
+type Geo2D struct {
+	Start     []float64   `json:"start"`
+	End       []float64   `json:"end"`
+	Precision float64     `json:"precision"`
+	Data      [][]float64 `json:"data"`
+}
+
+func (g *Geo2D) EncodeMsg(w *msgp.Writer) error {
+	w.WriteArrayHeader(4)
+
+	w.WriteArrayHeader(2)
+	w.WriteFloat64(g.Start[0])
+	w.WriteFloat64(g.Start[1])
+
+	w.WriteArrayHeader(2)
+	w.WriteFloat64(g.End[0])
+	w.WriteFloat64(g.End[1])
+
+	w.WriteFloat64(g.Precision)
+	rows := len(g.Data)
+	cols := 0
+	if rows > 0 {
+		cols = len(g.Data[0])
+	}
+	w.WriteArrayHeader(2)
+
+	w.WriteArrayHeader(2)
+	w.WriteInt(rows)
+	w.WriteInt(cols)
+
+	w.WriteArrayHeader(uint32(rows * cols))
+	for _, r := range g.Data {
+		for _, d := range r {
+			w.WriteFloat64(d)
+		}
+	}
+	return nil
+}
+
+func (g *Geo2D) DecodeMsg(r *msgp.Reader) error {
+	var err error
+	g.Start = make([]float64, 2)
+	g.End = make([]float64, 2)
+	var rows, cols int
+	_, _ = r.ReadArrayHeader()
+	_, _ = r.ReadArrayHeader()
+	g.Start[0], err = r.ReadFloat64()
+	g.Start[1], err = r.ReadFloat64()
+	_, _ = r.ReadArrayHeader()
+	g.End[0], err = r.ReadFloat64()
+	g.End[1], err = r.ReadFloat64()
+	g.Precision, err = r.ReadFloat64()
+	_, _ = r.ReadArrayHeader()
+	_, _ = r.ReadArrayHeader()
+	rows, err = r.ReadInt()
+	cols, err = r.ReadInt()
+	_, _ = r.ReadArrayHeader()
+	g.Data = make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		g.Data[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			g.Data[i][j], err = r.ReadFloat64()
+		}
+	}
+	return err
+}
 func process(e *Entry, value string, dt query.DType) {
 	switch dt {
 	case query.Int:
@@ -42,7 +109,12 @@ func process(e *Entry, value string, dt query.DType) {
 		}
 		e.Value = msgp.AppendInt64(e.Value, i.Unix())
 	case query.Geo2d:
-		e.Err = errors.New("GEO2D: Not Yet Implemented")
+		var b bytes.Buffer
+		var g Geo2D
+		json.Unmarshal([]byte(value), &g)
+		msgp.Encode(&b, &g)
+		e.Value = msgp.AppendInt(e.Value, b.Len())
+		e.Value = append(e.Value, b.Bytes()...)
 	}
 }
 
@@ -85,7 +157,12 @@ func ppack(prow *[]byte, row *[]byte, dt query.DType, mask bool) ([]byte, error)
 			*prow = msgp.AppendInt64(*prow, i)
 		}
 	case query.Geo2d:
-		return *prow, errors.New("GEO2D not implemented")
+		var l int
+		l, *row, err = msgp.ReadIntBytes(*row)
+		if mask {
+			*prow = append(*prow, (*row)[:l]...)
+		}
+		*row = (*row)[l:]
 	}
 	return *prow, err
 }

@@ -17,9 +17,10 @@ type Column struct {
 }
 
 type Schema struct {
-	Cols      []Column
-	TableName string
-	cmap      map[string]Column
+	Cols       []Column
+	TableName  string
+	cmap       map[string]Column
+	PrimaryKey []Column
 }
 
 type Entry struct {
@@ -190,7 +191,7 @@ func (s *Schema) Write(fields []string, values [][]string, entries chan Entry, w
 		}
 		entries <- e
 		if e.Err != nil {
-			return
+			break
 		}
 	}
 }

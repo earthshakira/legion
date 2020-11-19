@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% import "components/cards.html" light_card,end_card %}
+    <style>
+        .blockelem:first-child {
+            margin-top: 20px
+        }
+        .blockelem:last-child {
+            margin-bottom: 20px
+        }
+        .blockelem {
+            margin: auto;
+            padding-top: 10px;
+            width: 318px;
+            border: 1px solid transparent;
+            transition-property: box-shadow, height;
+            transition-duration: .2s;
+            transition-timing-function: cubic-bezier(.05,.03,.35,1);
+            border-radius: 5px;
+            box-shadow: 0px 0px 30px rgba(22, 33, 74, 0);
+            box-sizing: border-box;
+        }
+        .blockelem:hover {
+            box-shadow: 0px 4px 30px rgba(22, 33, 74, 0.08);
+            border-radius: 5px;
+            background-color: #FFF;
+            cursor: pointer;
+        }
+        .grabme, .blockico {
+            display: inline-block;
+        }
+        .grabme {
+            margin-top: 10px;
+            margin-left: 10px;
+            margin-bottom: -14px;
+            width: 15px;
+        }
+        #blocklist {
+            height: calc(100% - 220px);
+            overflow: auto;
+        }
+        #proplist {
+            height: calc(100% - 305px);
+            overflow: auto;
+            margin-top: -30px;
+            padding-top: 30px;
+        }
+        .blockin {
+            display: inline-block;
+            vertical-align: top;
+            margin-left: 12px;
+        }
+        .blockico {
+            width: 36px;
+            height: 36px;
+            background-color: #F1F4FC;
+            border-radius: 5px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .blockico span {
+            height: 100%;
+            width: 0px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .blockico img {
+            vertical-align: middle;
+            margin-left: auto;
+            margin-right: auto;
+            display: inline-block;
+        }
+        .blocktext {
+            display: inline-block;
+            width: 220px;
+            vertical-align: top;
+            margin-left: 12px
+        }
+        .blocktitle {
+            margin: 0px!important;
+            padding: 0px!important;
+            font-weight: 500;
+            font-size: 16px;
+            color: #393C44;
+        }
+        .blockdesc {
+            margin-top: 5px;
+            color: #808292;
+            font-size: 14px;
+            line-height: 21px;
+        }
+        .blockdisabled {
+            background-color: #F0F2F9;
+            opacity: .5;
+        }
+        #closecard {
+            position: absolute;
+            margin-left: 340px;
+            background-color: #FFF;
+            border-radius: 0px 5px 5px 0px;
+            border-bottom: 1px solid #E8E8EF;
+            border-right: 1px solid #E8E8EF;
+            border-top: 1px solid #E8E8EF;
+            width: 53px;
+            height: 53px;
+            text-align: center; 
+            z-index: 10;
+        }
+        #closecard img {
+            margin-top: 15px
+        }
+        #propwrap {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 311px;
+            height: 100%;
+            padding-left: 20px;
+            overflow: hidden;
+            z-index: -2;
+        }
+        #properties {
+            position: absolute;
+            height: 100%;
+            width: 311px;
+            background-color: #FFF;
+            right: -150px;
+            opacity: 0;
+            z-index: 2;
+            top: 0px;
+            box-shadow: -4px 0px 40px rgba(26, 26, 73, 0);
+            padding-left: 20px;
+            transition: all .25s cubic-bezier(.05,.03,.35,1);
+        }
+        .itson {
+            z-index: 2!important;
+        }
+        .expanded {
+            right: 0!important;
+            opacity: 1!important;
+            box-shadow: -4px 0px 40px rgba(26, 26, 73, 0.05);
+                z-index: 2;
+        }
+        #header2 {
+            font-size: 20px;
+            font-weight: bold;
+            color: #393C44;
+            margin-top: 101px;
+        }
+        #close {
+            margin-top: 100px;
+            position: absolute;
+            right: 20px;
+            z-index: 9999;
+            transition: all .25s cubic-bezier(.05,.03,.35,1);
+        }
+        #close:hover {
+            cursor: pointer;
+            opacity: .7;
+        }
+        #propswitch {
+            border-bottom: 1px solid #E8E8EF;
+            width: 331px;
+            margin-top: 10px;
+            margin-left: -20px;
+            margin-bottom: 30px;
+        }
+        #dataprop {
+            font-weight: 500;
+            font-size: 14px;
+            text-align: center;
+            color: #393C44;
+            width: calc(88% / 3);
+            height: 48px;
+            line-height: 48px;
+            display: inline-block;
+            float: left;
+            margin-left: 20px;
+        }
+        #dataprop:after {
+            display: block;
+            content: "";
+            width: 100%;
+            height: 4px;
+            background-color: #217CE8;
+            margin-top: -4px;
+        }
+        #alertprop {
+            display: inline-block;
+            font-weight: 500;
+            color: #808292;
+            font-size: 14px;
+            height: 48px;
+            line-height: 48px;
+            width: calc(88% / 3);
+            text-align: center;
+            float: left;
+        }
+        #logsprop {
+            width: calc(88% / 3);
+            display: inline-block;
+            font-weight: 500;
+            color: #808292;
+            font-size: 14px;
+            height: 48px;
+            line-height: 48px;
+            text-align: center;
+        }
+        .inputlabel {
+            font-size: 14px;
+            color: #253134;
+        }
+        .dropme {
+            background-color: #FFF;
+            border-radius: 5px;
+            border: 1px solid #E8E8EF;
+            box-shadow: 0px 2px 8px rgba(34, 34, 87, 0.05);
+            font-size: 14px;
+            color: #253134;
+            text-indent: 20px;
+            height: 40px;
+            line-height: 40px;
+            width: 287px;
+            margin-bottom: 25px;
+        }
+        .dropme img {
+            margin-top: 17px;
+            float: right;
+            margin-right: 15px;
+        }
+        .checkus {
+            margin-bottom: 10px;
+        }
+        .checkus img {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .checkus p {
+            display: inline-block;
+            font-size: 14px;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        #divisionthing {
+            height: 1px;
+            width: 100%;
+            background-color: #E8E8EF;
+            position: absolute;
+            right: 0px;
+            bottom: 80;
+        }
+        #removeblock {
+            border-radius: 5px;
+            position: absolute;
+            bottom: 20px;
+            font-size: 14px;
+            text-align: center;
+            width: 287px;
+            height: 38px;
+            line-height: 38px;
+            color: #253134;
+            border: 1px solid #E8E8EF;
+            transition: all .3s cubic-bezier(.05,.03,.35,1);
+        }
+        #removeblock:hover {
+            cursor: pointer;
+            opacity: .5;
+        }
+        .noselect {
+        -webkit-touch-callout: none; /* iOS Safari */
+            -webkit-user-select: none; /* Safari */
+            -khtml-user-select: none; /* Konqueror HTML */
+            -moz-user-select: none; /* Old versions of Firefox */
+                -ms-user-select: none; /* Internet Explorer/Edge */
+                    user-select: none; /* Non-prefixed version, currently
+                                        supported by Chrome, Opera and Firefox */
+        }
+        .blockyname {
+            font-weight: 500;
+            color: #253134;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+            font-size: 16px;
+        }
+        .blockyleft img {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .blockyright {
+            display: inline-block;
+            float: right;
+            vertical-align: middle;
+            margin-right: 20px;
+            margin-top: 10px;
+            width: 28px;
+            height: 28px;
+            border-radius: 5px;
+            text-align: center; 
+            background-color: #FFF;
+            transition: all .3s cubic-bezier(.05,.03,.35,1);
+            z-index: 10;
+        }
+        .blockyright:hover {
+            background-color: #F1F4FC;
+            cursor: pointer;
+        }
+        .blockyright img {
+            margin-top: 12px;
+        }
+        .blockyleft {
+            display: inline-block;
+            margin-left: 20px;
+        }
+        .blockydiv {
+            width: 100%;
+            height: 1px;
+            background-color: #E9E9EF;
+        }
+        .blockyinfo {
+            font-size: 14px;
+            color: #808292;
+            margin-top: 15px;
+            text-indent: 20px;
+            margin-bottom: 20px;
+        }
+        .blockyinfo span {
+            color: #253134;
+            font-weight: 500;
+            display: inline-block;
+            border-bottom: 1px solid #D3DCEA;
+            line-height: 20px;
+            text-indent: 0px;
+        }
+        .block {
+            background-color: #FFF;
+            margin-top: 0px!important;
+            box-shadow: 0px 4px 30px rgba(22, 33, 74, 0.05);
+        }
+        .selectedblock {
+            border: 2px solid #217CE8;
+            box-shadow: 0px 4px 30px rgba(22, 33, 74, 0.08);
+        }
+
+        @media only screen and (max-width: 832px) {
+            #centerswitch {
+                display: none;
+            }
+        }
+        @media only screen and (max-width: 560px) {
+            #names {
+                display: none;
+            }   
+        }
+    </style>
+    <div class="row">
+        <div class="col-md-5">
+                <div class="nav-wrapper" style="background-color:rgba(255,255,255,0.3);">
+                    <ul class="nav nav-pills nav-fill flex-column flex-md-row rounded" id="tabs-icons-text" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link mb-sm-3 mb-md-0 active" id="tabs-icons-text-1-tab" data-toggle="tab" href="#tabs-icons-text-1" role="tab" aria-controls="tabs-icons-text-1" aria-selected="true"><i class="ni ni-cloud-upload-96 mr-2"></i>New</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link mb-sm-3 mb-md-0" id="tabs-icons-text-2-tab" data-toggle="tab" href="#tabs-icons-text-2" role="tab" aria-controls="tabs-icons-text-2" aria-selected="false"><i class="ni ni-ungroup mr-2"></i>Saved</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card shadow">
+                    <div class="card-body" style="padding:0">
+                        <div class="tab-content" id="myTabContent">
+                            <div class="tab-pane fade show active" id="tabs-icons-text-1"  role="tabpanel" aria-labelledby="tabs-icons-text-1-tab">
+                               <div id="blocklist" style="padding:auto;max-height:60vh">
+                                    <div style="margin:20px">
+                                        <div class="col-xs-6"> 
+                                            <input type="text" class="form-control" {% if workflow %} value="{{workflow.Name}}" disabled {%endif%} placeholder="Workflow Name..." id="workflowName">
+                                        </div>
+                                        {% if workflow %}
+                                            <div class="text-right">
+                                            <br/>
+                                            <button class="btn btn-icon btn-primary" type="button" onclick="executeWorkFlow()" >
+                                                <div style="height:1.5em;width: 1.5em;display:none" class="loader" id="executionLoader"></div>
+                                                <span class="btn-inner--icon" id="executionIcon"><i class="ni ni-user-run"></i></span>
+                                            </button>
+                                            <button class="btn btn-icon btn-success" type="button" onclick="saveWorkflow()">
+                                                <span class="btn-inner--icon"><i class="ni ni-cloud-upload-96"></i></span>
+                                            </button>
+                                            </div>
+                                        {% else %}
+                                            <button class="btn btn-icon btn-success" type="button" onclick="saveWorkflow()" style="float:right;margin-top:-3.15em;margin-right:0.15em">
+                                                <span class="btn-inner--icon"><i class="ni ni-cloud-upload-96"></i></span>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                    <div class="blockelem create-flowy noselect">
+                                        <input type="hidden" name="blockelemtype" class="blockelemtype" value="1">
+                                        <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
+                                        <div class="blockin">
+                                            <div class="blockico"><span></span><img src="/assets/img/icons/log.svg"></div>
+                                            <div class="blocktext">
+                                                <p class="blocktitle">Script</p>
+                                                <p class="blockdesc">Add a Script to the pipeline</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="blockelem create-flowy noselect">
+                                        <input type="hidden" name="blockelemtype" class="blockelemtype" value="2">
+                                        <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
+                                        <div class="blockin">
+                                            <div class="blockico"><span></span><img src="/assets/img/icons/action.svg"></div>
+                                            <div class="blocktext">
+                                                <p class="blocktitle">JSON split</p>
+                                                <p class="blockdesc">Use JSON to split previous output into various states</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="blockelem create-flowy noselect">
+                                        <input type="hidden" name="blockelemtype" class="blockelemtype" value="3">
+                                        <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
+                                        <div class="blockin">
+                                            <div class="blockico"><span></span><img src="/assets/img/icons/database.svg"></div>
+                                            <div class="blocktext">
+                                                <p class="blocktitle">Add Data</p>
+                                                <p class="blockdesc">Insert Data Into a Table</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div> 
+                            </div>
+                            <div class="tab-pane fade" id="tabs-icons-text-2" role="tabpanel" aria-labelledby="tabs-icons-text-2-tab">
+                                <div class="table-responsive">
+                                    <table class="table align-items-center table-flush">
+                                        <tbody class="list">
+                                            {% for wf in savedWorkflows %}
+                                                <tr>
+                                                    <td>
+                                                        <a href="/workflows/view/{{wf.Name}}">{{wf.Name}}</a><br/>
+                                                        <small><script>document.write("{{wf.Modified}}".split(".")[0])</script></small>
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        <div class="col-md-7">
+            <button class="btn btn-icon btn-danger" type="button" onclick="flowy.deleteBlocks()" style="z-index:10;float:right;margin-top:0.2em;margin-right:-2em">
+                <span class="btn-inner--icon"><i class="ni ni-archive-2"></i></span>
+            </button>
+            <div id="canvas" class="rounded" style="background-image:url(/assets/img/icons/tile.png);background-repeat:repeat;background-size: 30px 30px;background-color: #FBFBFB;position:absolute;z-index: 0;min-height:calc(100vh - 7.5em);width:100%;overflow-x:hide;overflow-y:scroll">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function byId(ele){return document.getElementById(ele);}
+        let autoId = 0;
+        function saveWorkflow(){
+            $("#workflowName").removeClass("is-invalid")
+            let name = $("#workflowName").val()
+            if(name == "") {
+                $("#workflowName").addClass("is-invalid")
+                return
+            }
+            let output = flowy.output()
+            let workflowPayload = {name,output,blocks:[]}
+            if(!output.blocks){
+                alert("Please add some blocks to allow save")
+                return
+            }
+            for (let block of output.blocks) {
+                let payload = {
+                    id: block.id,
+                    parent: block.parent
+                }
+                for(let k of block.attr){
+                    let key = Object.keys(k)[0]
+                    if ( key.indexOf("data-") == 0){
+                        payload[key.replace("data-","")] = k[key]
+                    }
+                }
+                payload.type = parseInt(payload.type)
+                workflowPayload.blocks.push(payload)
+            }
+            postData("/workflows/save",workflowPayload)
+        }
+
+        function executeWorkFlow() {
+            byId("executionLoader").style.display="block";
+            byId("executionIcon").style.display="none";
+            fetch('/workflows/execute/{{workflow.Name}}')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data)
+                    byId("executionIcon").style.display="block";
+                    byId("executionLoader").style.display="none";
+                });
+
+        }
+        function setScriptValue(elem) {
+            $(elem).parent().attr("data-value",$(elem).val())
+            console.log("set the value",$(elem).val())
+        }
+        document.addEventListener("DOMContentLoaded", function(){
+            var rightcard = false;
+            var tempblock;  
+            var tempblock2;
+            flowy(document.getElementById("canvas"), drag, release, snapping,10,10);
+            {% if workflowOutput %}
+                let savedWorkflow = {{workflowOutput | safe }}
+                flowy.import(savedWorkflow)
+            {% endif %}
+            function addEventListenerMulti(type, listener, capture, selector) {
+                var nodes = document.querySelectorAll(selector);
+                for (var i = 0; i < nodes.length; i++) {
+                    nodes[i].addEventListener(type, listener, capture);
+                }
+            }
+
+            function snapping(drag, first) {
+                autoId += 1
+                var grab = drag.querySelector(".grabme");
+                grab.parentNode.removeChild(grab);
+                var blockin = drag.querySelector(".blockin");
+                blockin.parentNode.removeChild(blockin);
+                if (drag.querySelector(".blockelemtype").value == "1") {
+                    drag.innerHTML += `
+                    <div class='blockyleft' id="drag-element-${autoId}">
+                        <img style='vertical-align: baseline' src='/assets/img/icons/log.svg'>
+                        <p class='blockyname'>Script</p>
+                    </div>
+                    <select class="form-control-flush" style="float:right;margin-top:2px;margin-right:1em" onchange="setScriptValue(this)">
+                        {% for s in savedScripts %}
+                            <option>{{s.Name}}</option>
+                        {% endfor %}
+                    </select>
+                    `;
+                    $(drag).attr("data-type",1)
+                    {% if savedScripts.0 %}
+                    $(drag).attr("data-value","{{savedScripts.0.Name}}")
+                    {% endif %}
+                } else if (drag.querySelector(".blockelemtype").value == "2") {
+                    drag.innerHTML += `
+                        <div class='blockyleft' id="drag-element-${autoId}">
+                            <img style="vertical-align:top" src='/assets/img/icons/actionblue.svg'>
+                            <p class='blockyname'>JSON Split</p>
+                        </div>
+                        `;
+                    $(drag).attr("data-type",2)
+                } else if (drag.querySelector(".blockelemtype").value == "3") {
+                    drag.innerHTML += `
+                    <div class='blockyleft' id="drag-element-${autoId}">
+                        <img src='/assets/img/icons/databaseorange.svg'>
+                        <p class='blockyname'>New database entry</p>
+                    </div>`;
+                    $(drag).attr("data-type",3)
+                }
+                return true;
+            }
+            function drag(block) {
+                block.classList.add("blockdisabled");
+                tempblock2 = block;
+            }
+            function release() {
+                if (tempblock2) {
+                    tempblock2.classList.remove("blockdisabled");
+                }
+            }
+        var aclick = false;
+        var noinfo = false;
+        var beginTouch = function (event) {
+            aclick = true;
+            noinfo = false;
+            if (event.target.closest(".create-flowy")) {
+                noinfo = true;
+            }
+        }
+        var checkTouch = function (event) {
+            aclick = false;
+        }
+        var doneTouch = function (event) {
+            if (event.type === "mouseup" && aclick && !noinfo) {
+            if (!rightcard && event.target.closest(".block") && !event.target.closest(".block").classList.contains("dragging")) {
+                    tempblock = event.target.closest(".block");
+                    rightcard = true;
+                    tempblock.classList.add("selectedblock");
+            } 
+            }
+        }
+        addEventListener("mousedown", beginTouch, false);
+        addEventListener("mousemove", checkTouch, false);
+        addEventListener("mouseup", doneTouch, false);
+        addEventListenerMulti("touchstart", beginTouch, false, ".block");
+        });
+    </script>
+{% endblock %}

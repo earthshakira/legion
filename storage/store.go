@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sophron-dev-works/legion/clustering"
+
 	"github.com/dgraph-io/badger"
 	"github.com/sophron-dev-works/legion/sqlparser"
 	"github.com/sophron-dev-works/legion/sqlparser/query"
@@ -15,76 +17,72 @@ import (
 )
 
 type SimpleStore struct {
-	data     *badger.DB
-	metadata *badger.DB
-	schema   map[string]Schema
+	data          *badger.DB
+	node          *clustering.Node
+	autoIncrement map[string]*badger.Sequence
 }
 
-func (ss *SimpleStore) schemaInit() {
-	ss.metadata.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-		prefix := []byte("table.")
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			err := it.Item().Value(func(v []byte) error {
-				var s Schema
-				msgp.Decode(bytes.NewReader(v), &s)
-				ss.schema[s.TableName] = s
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (ss *SimpleStore) Init(storeName string) {
+func (ss *SimpleStore) Init(node *clustering.Node) {
 	var err error
-	ss.schema = make(map[string]Schema)
-	ss.metadata, err = badger.Open(badger.DefaultOptions("/tmp/metadata_" + storeName))
+	ss.autoIncrement = make(map[string]*badger.Sequence)
+	ss.node = node
+
 	if err != nil {
 		log.Fatal(err)
 	}
-	ss.data, err = badger.Open(badger.DefaultOptions("/tmp/data_" + storeName))
-
-	ss.schemaInit()
+	ss.data, err = badger.Open(badger.DefaultOptions("/tmp/data_" + node.Id))
 }
 
 func (ss *SimpleStore) Shutdown() {
-	ss.metadata.Close()
+	for _, seq := range ss.autoIncrement {
+		seq.Release()
+	}
+	ss.data.Close()
 }
 
 func (ss *SimpleStore) GetSchemas() []Schema {
 	var s []Schema
-	for _, v := range ss.schema {
-		s = append(s, v)
+	m, _ := ss.node.Raft().GetAll("table.")
+	for _, v := range m {
+		var ss Schema
+		msgp.Decode(bytes.NewReader(v), &ss)
+		s = append(s, ss)
 	}
 	return s
 }
+
+func (ss *SimpleStore) getAutoIncrement(schema Schema) (*badger.Sequence, error) {
+	var err error
+	if _, exists := ss.autoIncrement[schema.TableName]; !exists {
+		ss.autoIncrement[schema.TableName], err = ss.data.GetSequence([]byte("auto_increment."+schema.TableName), 1000)
+	}
+	return ss.autoIncrement[schema.TableName], err
+}
+
 func (ss *SimpleStore) create(q query.Query) error {
-	if _, exists := ss.schema[q.TableName]; exists {
+	if _, exists := ss.node.Raft().Get(q.TableName); exists {
 		return errors.New("Table '" + q.TableName + "' already exists")
 	}
 	var schema Schema
 	schema.Init(q.TableName, q.Fields, q.DTypes)
 	var b bytes.Buffer
 	msgp.Encode(&b, &schema)
-	err := ss.metadata.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte("table."+schema.TableName), b.Bytes())
-	})
-	if err != nil {
-		return err
-	}
-	ss.schema[schema.TableName] = schema
+	err := ss.node.Raft().Set("table."+schema.TableName, b.Bytes())
 	return err
 }
 
+func (ss *SimpleStore) getSchema(tableName string) (Schema, bool) {
+	var s Schema
+	v, exists := ss.node.Raft().Get("table." + tableName)
+	if exists {
+		msgp.Decode(bytes.NewReader(v), &s)
+	}
+	return s, exists
+}
 func (ss *SimpleStore) insert(q query.Query) error {
-	schema, ok := ss.schema[q.TableName]
+	schema, ok := ss.getSchema(q.TableName)
 	if !ok {
-		return errors.New(`No table with name '{{q.TableName}}'`)
+		return errors.New(`No table with name '` + q.TableName + `'`)
 	}
 	err := schema.ValidateFields(q.Fields)
 	if err != nil {
@@ -92,35 +90,34 @@ func (ss *SimpleStore) insert(q query.Query) error {
 	}
 	entries := make(chan Entry, 5)
 	var wg sync.WaitGroup
+	// TODO: test if this go routine helps after GEO2D
 	go schema.Write(q.Fields, q.Inserts, entries, &wg)
-	seq, err := ss.data.GetSequence([]byte("auto_increment."+schema.TableName), 1000)
-	defer seq.Release()
-
-	err = ss.data.Update(func(txn *badger.Txn) error {
-		for c := range entries {
-			if c.Err != nil {
-				txn.Discard()
-				return c.Err
-			}
-			seqNum, err := seq.Next()
-			if err != nil {
-				txn.Discard()
-				return err
-			}
-			err = txn.Set([]byte(fmt.Sprintf("%s.%d", schema.TableName, seqNum)), c.Value)
-			if err != nil {
-				txn.Discard()
-				return err
-			}
-			wg.Done()
+	seq, err := ss.getAutoIncrement(schema)
+	if err != nil {
+		return err
+	}
+	wb := ss.data.NewWriteBatch()
+	defer wb.Cancel()
+	for c := range entries {
+		if c.Err != nil {
+			return c.Err
 		}
-		return nil
-	})
+		seqNum, err := seq.Next()
+		if err != nil {
+			return err
+		}
+		err = wb.Set([]byte(fmt.Sprintf("%s.%d", schema.TableName, seqNum)), c.Value)
+		if err != nil {
+			return err
+		}
+		wg.Done()
+	}
+	err = wb.Flush()
 	return err
 }
 
 func (ss *SimpleStore) qselect(q query.Query) (*QueryResult, error) {
-	schema, ok := ss.schema[q.TableName]
+	schema, ok := ss.getSchema(q.TableName)
 	if !ok {
 		return nil, errors.New("No table with name '" + q.TableName + "'")
 	}
@@ -161,7 +158,7 @@ func (ss *SimpleStore) Query(queryStr string) (*QueryResult, error) {
 	var res *QueryResult
 	switch q.Type {
 	case query.Create:
-		ss.create(q)
+		err = ss.create(q)
 	case query.Select:
 		res, err = ss.qselect(q)
 	case query.Insert:
