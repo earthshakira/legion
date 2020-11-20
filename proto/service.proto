@@ -31,9 +31,14 @@ message WorkflowLog {
     string id = 1;
     string taskId = 2;
     string log = 3;
+    string workflowId = 4;
 }
 
+message WorkflowLogAck {
+    string ack = 1;
+}
 service Executor {
     rpc Submit (Task) returns (TaskAck);
     rpc WriteFile (FileContents) returns (FilePath);
+    rpc Log (WorkflowLog) returns (WorkflowLogAck);
 }

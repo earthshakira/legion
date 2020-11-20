@@ -50,10 +50,6 @@ func startUI() ui.IrisWrapper {
 	var db storage.SimpleStore
 	db.Init(&node)
 
-	iw := ui.Init()
-	var dash clustering.Dashboard
-	dash.Init(&node)
-
 	var ee execution.ExecutionEngine
 	ee.Init(&node)
 
@@ -63,8 +59,12 @@ func startUI() ui.IrisWrapper {
 	go ex.Listen()
 	fmt.Println("done")
 
+	iw := ui.Init()
+	var dash clustering.Dashboard
+	dash.Init(&node)
+
 	var we execution.WorkflowEngine
-	we.Init(&node, ex)
+	we.Init(&node, &ex)
 
 	var se dbshell.ShellEngine
 	se.SetNode(db, &node)

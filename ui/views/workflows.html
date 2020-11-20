@@ -226,7 +226,7 @@
         }
         .dropme img {
             margin-top: 17px;
-            float: right;
+            float: right;5000
             margin-right: 15px;
         }
         .checkus {
@@ -356,97 +356,116 @@
     </style>
     <div class="row">
         <div class="col-md-5">
-                <div class="nav-wrapper" style="background-color:rgba(255,255,255,0.3);">
-                    <ul class="nav nav-pills nav-fill flex-column flex-md-row rounded" id="tabs-icons-text" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link mb-sm-3 mb-md-0 active" id="tabs-icons-text-1-tab" data-toggle="tab" href="#tabs-icons-text-1" role="tab" aria-controls="tabs-icons-text-1" aria-selected="true"><i class="ni ni-cloud-upload-96 mr-2"></i>New</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link mb-sm-3 mb-md-0" id="tabs-icons-text-2-tab" data-toggle="tab" href="#tabs-icons-text-2" role="tab" aria-controls="tabs-icons-text-2" aria-selected="false"><i class="ni ni-ungroup mr-2"></i>Saved</a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="card shadow">
-                    <div class="card-body" style="padding:0">
-                        <div class="tab-content" id="myTabContent">
-                            <div class="tab-pane fade show active" id="tabs-icons-text-1"  role="tabpanel" aria-labelledby="tabs-icons-text-1-tab">
-                               <div id="blocklist" style="padding:auto;max-height:60vh">
-                                    <div style="margin:20px">
-                                        <div class="col-xs-6"> 
-                                            <input type="text" class="form-control" {% if workflow %} value="{{workflow.Name}}" disabled {%endif%} placeholder="Workflow Name..." id="workflowName">
-                                        </div>
-                                        {% if workflow %}
-                                            <div class="text-right">
-                                            <br/>
-                                            <button class="btn btn-icon btn-primary" type="button" onclick="executeWorkFlow()" >
-                                                <div style="height:1.5em;width: 1.5em;display:none" class="loader" id="executionLoader"></div>
-                                                <span class="btn-inner--icon" id="executionIcon"><i class="ni ni-user-run"></i></span>
-                                            </button>
-                                            <button class="btn btn-icon btn-success" type="button" onclick="saveWorkflow()">
-                                                <span class="btn-inner--icon"><i class="ni ni-cloud-upload-96"></i></span>
-                                            </button>
-                                            </div>
-                                        {% else %}
-                                            <button class="btn btn-icon btn-success" type="button" onclick="saveWorkflow()" style="float:right;margin-top:-3.15em;margin-right:0.15em">
-                                                <span class="btn-inner--icon"><i class="ni ni-cloud-upload-96"></i></span>
-                                            </button>
-                                        {% endif %}
-                                    </div>
-                                    <div class="blockelem create-flowy noselect">
-                                        <input type="hidden" name="blockelemtype" class="blockelemtype" value="1">
-                                        <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
-                                        <div class="blockin">
-                                            <div class="blockico"><span></span><img src="/assets/img/icons/log.svg"></div>
-                                            <div class="blocktext">
-                                                <p class="blocktitle">Script</p>
-                                                <p class="blockdesc">Add a Script to the pipeline</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="blockelem create-flowy noselect">
-                                        <input type="hidden" name="blockelemtype" class="blockelemtype" value="2">
-                                        <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
-                                        <div class="blockin">
-                                            <div class="blockico"><span></span><img src="/assets/img/icons/action.svg"></div>
-                                            <div class="blocktext">
-                                                <p class="blocktitle">JSON split</p>
-                                                <p class="blockdesc">Use JSON to split previous output into various states</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="blockelem create-flowy noselect">
-                                        <input type="hidden" name="blockelemtype" class="blockelemtype" value="3">
-                                        <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
-                                        <div class="blockin">
-                                            <div class="blockico"><span></span><img src="/assets/img/icons/database.svg"></div>
-                                            <div class="blocktext">
-                                                <p class="blocktitle">Add Data</p>
-                                                <p class="blockdesc">Insert Data Into a Table</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div> 
-                            </div>
-                            <div class="tab-pane fade" id="tabs-icons-text-2" role="tabpanel" aria-labelledby="tabs-icons-text-2-tab">
-                                <div class="table-responsive">
-                                    <table class="table align-items-center table-flush">
-                                        <tbody class="list">
-                                            {% for wf in savedWorkflows %}
-                                                <tr>
-                                                    <td>
-                                                        <a href="/workflows/view/{{wf.Name}}">{{wf.Name}}</a><br/>
-                                                        <small><script>document.write("{{wf.Modified}}".split(".")[0])</script></small>
-                                                    </td>
-                                                    <td></td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
+            <div class="modal fade" id="modal-notification" tabindex="-1" role="dialog" aria-labelledby="modal-notification" aria-hidden="true">
+                <div class="modal-dialog modal-danger modal-dialog-centered modal-lg" role="document">
+                    <div class="modal-content bg-gradient-primary">
+                        <div class="modal-header">
+                            <h6 class="modal-title" id="modal-title-notification">Workflow Execution</h6>
+                            <div style="margin-top:0.1em;margin-left:0.5em;height:1em;width: 1em;display:none" class="loader" id="workflowRefresher"></div>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="clearInterval(executionInterval)">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body" style="padding-top:0">
+                            <div class="rounded bg-gradient-secondary" style="max-height:60vh;overflow-y:auto">
+                                <pre><code id="executionLogs"></code></pre>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="nav-wrapper" style="background-color:rgba(255,255,255,0.3);">
+                <ul class="nav nav-pills nav-fill flex-column flex-md-row rounded" id="tabs-icons-text" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link mb-sm-3 mb-md-0 active" id="tabs-icons-text-1-tab" data-toggle="tab" href="#tabs-icons-text-1" role="tab" aria-controls="tabs-icons-text-1" aria-selected="true"><i class="ni ni-cloud-upload-96 mr-2"></i>New</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link mb-sm-3 mb-md-0" id="tabs-icons-text-2-tab" data-toggle="tab" href="#tabs-icons-text-2" role="tab" aria-controls="tabs-icons-text-2" aria-selected="false"><i class="ni ni-ungroup mr-2"></i>Saved</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card shadow">
+                <div class="card-body" style="padding:0">
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="tabs-icons-text-1"  role="tabpanel" aria-labelledby="tabs-icons-text-1-tab">
+                            <div id="blocklist" style="padding:auto;max-height:60vh">
+                                <div style="margin:20px">
+                                    <div class="col-xs-6"> 
+                                        <input type="text" class="form-control" {% if workflow %} value="{{workflow.Name}}" disabled {%endif%} placeholder="Workflow Name..." id="workflowName">
+                                    </div>
+                                    {% if workflow %}
+                                        <div class="text-right">
+                                        <br/>
+                                        <button class="btn btn-icon btn-primary" type="button" onclick="executeWorkFlow()" data-toggle="modal" data-target="#modal-notification">
+                                            <div style="height:1.5em;width: 1.5em;display:none" class="loader" id="executionLoader"></div>
+                                            <span class="btn-inner--icon" id="executionIcon"><i class="ni ni-user-run"></i></span>
+                                        </button>
+                                        <button class="btn btn-icon btn-success" type="button" onclick="saveWorkflow()">
+                                            <span class="btn-inner--icon"><i class="ni ni-cloud-upload-96"></i></span>
+                                        </button>
+                                        </div>
+                                    {% else %}
+                                        <button class="btn btn-icon btn-success" type="button" onclick="saveWorkflow()" style="float:right;margin-top:-3.15em;margin-right:0.15em">
+                                            <span class="btn-inner--icon"><i class="ni ni-cloud-upload-96"></i></span>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                <div class="blockelem create-flowy noselect">
+                                    <input type="hidden" name="blockelemtype" class="blockelemtype" value="1">
+                                    <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
+                                    <div class="blockin">
+                                        <div class="blockico"><span></span><img src="/assets/img/icons/log.svg"></div>
+                                        <div class="blocktext">
+                                            <p class="blocktitle">Script</p>
+                                            <p class="blockdesc">Add a Script to the pipeline</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="blockelem create-flowy noselect">
+                                    <input type="hidden" name="blockelemtype" class="blockelemtype" value="2">
+                                    <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
+                                    <div class="blockin">
+                                        <div class="blockico"><span></span><img src="/assets/img/icons/action.svg"></div>
+                                        <div class="blocktext">
+                                            <p class="blocktitle">JSON split</p>
+                                            <p class="blockdesc">Use JSON to split previous output into various states</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="blockelem create-flowy noselect">
+                                    <input type="hidden" name="blockelemtype" class="blockelemtype" value="3">
+                                    <div class="grabme"><img src="/assets/img/icons/grabme.svg"></div>
+                                    <div class="blockin">
+                                        <div class="blockico"><span></span><img src="/assets/img/icons/database.svg"></div>
+                                        <div class="blocktext">
+                                            <p class="blocktitle">Add Data</p>
+                                            <p class="blockdesc">Insert Data Into a Table</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div> 
+                        </div>
+                        <div class="tab-pane fade" id="tabs-icons-text-2" role="tabpanel" aria-labelledby="tabs-icons-text-2-tab">
+                            <div class="table-responsive">
+                                <table class="table align-items-center table-flush">
+                                    <tbody class="list">
+                                        {% for wf in savedWorkflows %}
+                                            <tr>
+                                                <td>
+                                                    <a href="/workflows/view/{{wf.Name}}">{{wf.Name}}</a><br/>
+                                                    <small><script>document.write("{{wf.Modified}}".split(".")[0])</script></small>
+                                                </td>
+                                                <td></td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="col-md-7">
             <button class="btn btn-icon btn-danger" type="button" onclick="flowy.deleteBlocks()" style="z-index:10;float:right;margin-top:0.2em;margin-right:-2em">
@@ -460,6 +479,7 @@
     <script>
         function byId(ele){return document.getElementById(ele);}
         let autoId = 0;
+        let executionInterval = null;
         function saveWorkflow(){
             $("#workflowName").removeClass("is-invalid")
             let name = $("#workflowName").val()
@@ -496,7 +516,22 @@
             fetch('/workflows/execute/{{workflow.Name}}')
                 .then(response => response.json())
                 .then(data => {
-                    console.log(data)
+                    byId("workflowRefresher").style.display="block";
+                    fetch('/workflows/logs/'+data.workflowId).then(response => {    
+                        response.text().then(text => {
+                            $("#executionLogs").html(text)
+                            byId("workflowRefresher").style.display="none";
+                        })
+                    })
+                    executionInterval = setInterval(function(){
+                        byId("workflowRefresher").style.display="block";
+                        fetch('/workflows/logs/'+data.workflowId).then(response => {
+                            response.text().then(text => {
+                                $("#executionLogs").html(text)
+                                byId("workflowRefresher").style.display="none";
+                            })
+                        })
+                    },1000)
                     byId("executionIcon").style.display="block";
                     byId("executionLoader").style.display="none";
                 });
@@ -511,10 +546,15 @@
             var tempblock;  
             var tempblock2;
             flowy(document.getElementById("canvas"), drag, release, snapping,10,10);
+            
             {% if workflowOutput %}
                 let savedWorkflow = {{workflowOutput | safe }}
                 flowy.import(savedWorkflow)
+                $("div[data-type=\"1\"]" ).each(function (i, elem) {
+                    $(elem).children('select').val($(elem).attr('data-value'))
+                });
             {% endif %}
+
             function addEventListenerMulti(type, listener, capture, selector) {
                 var nodes = document.querySelectorAll(selector);
                 for (var i = 0; i < nodes.length; i++) {

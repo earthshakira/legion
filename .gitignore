@@ -19,3 +19,9 @@
 
 # ignoring the build file to help
 legion
+
+#ignoring raftDir
+**.ipynb_checkpoints
+**/raftStorage
+**/raftStorage2
+**/raftStorage3

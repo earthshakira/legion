@@ -19,6 +19,24 @@
 <!-- Argon CSS -->
 <link rel="stylesheet" href="/assets/css/argon.css?v=1.2.0" type="text/css">
 <script src="/assets/js/ace.js"></script>
+<style>
+    * {
+  scrollbar-width: thin;
+  scrollbar-color: gray rgba(0, 0, 0, 0.2);
+}
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: gray;
+  border-radius: 2px;
+}
+</style>
 <script>
 
     async function postData(url = '', data = {}) {

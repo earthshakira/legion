@@ -7,6 +7,7 @@ require (
 	github.com/CloudyKit/jet/v3 v3.0.0 // indirect
 	github.com/GoAdminGroup/go-admin v1.2.17 // indirect
 	github.com/Joker/hpp v1.0.0 // indirect
+	github.com/c9s/goprocinfo v0.0.0-20200311234719-5750cbd54a3b
 	github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa // indirect
 	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/coreos/go-systemd v0.0.0-20180511133405-39ca1b05acc7 // indirect
@@ -37,6 +38,7 @@ require (
 	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/kataras/iris v0.0.2
 	github.com/kataras/iris/v12 v12.2.0-alpha.0.20201107104914-7b6a8f1e2646
+	github.com/mackerelio/go-osstat v0.1.0
 	github.com/mattn/go-runewidth v0.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect

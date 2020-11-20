@@ -131,6 +131,9 @@ func (s *RaftStore) Get(key string) ([]byte, bool) {
 	return v, exists
 }
 
+func (s *RaftStore) GetSize() int {
+	return len(s.m)
+}
 func (s *RaftStore) GetAll(prefix string) (map[string][]byte, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

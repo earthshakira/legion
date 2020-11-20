@@ -14,10 +14,10 @@ import (
 type WorkflowEngine struct {
 	vs       ui.ViewState
 	node     *clustering.Node
-	executor Executor
+	executor *Executor
 }
 
-func (we *WorkflowEngine) Init(node *clustering.Node, executor Executor) {
+func (we *WorkflowEngine) Init(node *clustering.Node, executor *Executor) {
 	we.node = node
 	we.executor = executor
 }
@@ -61,6 +61,17 @@ func (we *WorkflowEngine) Create(iw router.Party, vs ui.ViewState) {
 		output, _ := json.Marshal(workflowPayload.Output)
 		data["workflowOutput"] = string(output)
 		ctx.View("workflows.html", data)
+	})
+	iw.Get("/logs/{execId}", func(ctx iris.Context) {
+		// TODO: handle errors
+		workflowId := ctx.Params().Get("execId")
+		log, ok := we.executor.WorkFlowlogs[workflowId]
+		if !ok {
+			ctx.StopWithProblem(iris.StatusBadRequest, iris.NewProblem().
+				Title("Workflow Execution not found").DetailErr(errors.New("Workflow Id maynot exist or is not present on this machine")))
+		} else {
+			ctx.Text(log.String())
+		}
 	})
 	iw.Get("/list", we.listAllWorkflows)
 	iw.Get("/execute/{name}", we.executeWorkflow)

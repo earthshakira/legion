@@ -80,9 +80,10 @@ func (node *Node) serfInit(n *NodeConfig) {
 	serfConfig.LogOutput = os.Stdout
 
 	serfConfig.Tags = make(map[string]string)
-	serfConfig.Tags["httpPort"] = fmt.Sprintf("%d", n.HttpPort)
-	serfConfig.Tags["raft"] = fmt.Sprintf("%d", n.RaftPort)
+	serfConfig.Tags["http"] = fmt.Sprintf("%s:%d", n.Ip, n.HttpPort)
+	serfConfig.Tags["raft"] = fmt.Sprintf("%s:%d", n.Ip, n.RaftPort)
 	serfConfig.Tags["grpc"] = fmt.Sprintf("%s:%d", n.Ip, n.GrpcPort)
+	serfConfig.Tags["serf"] = fmt.Sprintf("%s:%d", n.Ip, n.SerfPort)
 	node.GRPCEndpoint = fmt.Sprintf("%s:%d", n.Ip, n.GrpcPort)
 	node.serf, err = serf.Create(serfConfig)
 	if err != nil {
@@ -141,6 +142,10 @@ func (node *Node) Start() {
 						node.JoinRaft(member.Name)
 					} else if memberEvent.EventType() == serf.EventMemberLeave || memberEvent.EventType() == serf.EventMemberFailed || memberEvent.EventType() == serf.EventMemberReap {
 						node.LeaveRaft(member.Name)
+						if memberEvent.EventType() == serf.EventMemberFailed {
+							node.serf.RemoveFailedNode(member.Name)
+						}
+
 					}
 				}
 			} else if ev.EventType() == serf.EventUser {

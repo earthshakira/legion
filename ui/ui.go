@@ -54,7 +54,7 @@ func Init() IrisWrapper {
 		{
 			"Link",
 			"Dashboard",
-			"",
+			"/dashboard",
 			"ni ni-app text-primary",
 		},
 		{
