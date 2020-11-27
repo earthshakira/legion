@@ -293,6 +293,7 @@ func (ex *Executor) Serve() {
 	}
 	s := grpc.NewServer()
 	proto.RegisterExecutorServer(s, ex)
+	
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

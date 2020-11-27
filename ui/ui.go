@@ -96,6 +96,10 @@ func Init() IrisWrapper {
 	}
 	var iw IrisWrapper
 	iw.app = iris.New()
+	iw.app.HandleDir("/files", iris.Dir("/tmp/analysis"), iris.DirOptions{
+		Compress: true,
+		ShowList: true,
+	})
 	iw.Grpc = grpc.NewServer()
 	iw.vs = ViewState{
 		ActivePage: "Scripts",
