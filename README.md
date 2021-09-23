@@ -1,18 +1,22 @@
 # legion
 
-As in a **legion** of systems that are distributed golang system for data management, task processing and scalability.
+As in a **legion** of systems that are distributed golang system for data management, task processing and scalability. It uses Raft for distributed concencus and GRPC for communication.
 
 
 ## Parts of the system
 
-### UI
+### Dashboard
+![alt text](https://i.imgur.com/yBc8Pit.png)
+See Cluster Status, what nodes are online, who is the leader and what are the communication ports.
 
-### ExecutionEngine
+### Script Execution and workflows
+Script creation, so you can write python code to create processing nodes in a workflow, then you can execute these in a distributed fashion accross all the systems.
 
-### SQLParser
+#### Script Editor
+![alt text](https://i.imgur.com/v0klRQX.png)
 
-### DBShell
+#### Workflow Creator
+![alt text](https://i.imgur.com/4GIqs6N.png)
 
-### ClusterManagement
-
-
+### SQL Shells for Local and Distributed Data
+![alt text](https://i.imgur.com/FwQtX68.png)
