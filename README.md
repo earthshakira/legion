@@ -1,6 +1,6 @@
 # legion
 
-As in a **legion** of systems that are distributed golang system for data management, task processing and scalability. It uses Raft for distributed concencus and GRPC for communication.
+As in a **legion** of systems that are distributed golang system for data management, task processing and scalability. It uses Raft for distributed concensus and GRPC for communication.
 
 
 ## Parts of the system
